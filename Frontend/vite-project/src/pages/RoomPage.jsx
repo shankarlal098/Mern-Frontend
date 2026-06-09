@@ -242,116 +242,105 @@ function RoomPage() {
     });
   }
 
-
-  return (
-    <div className="min-h-screen bg-base-300 text-white p-5">
-      {/*   NAV BAR */}
-      <div className="flex justify-between items-center mb-6">
-          {/* APP TITLE */}
-          <h1 className="text-4xl font-bold text-cyan-400">
-            CodeTogether 
-          </h1>
-          <div className="flex items-center gap-3">
-            <span className="font-medium">
-              {user?.firstName}
-            </span>
-            <LogoutButton />
-          </div>
+    return (
+  <div className="min-h-screen bg-base-300 text-white p-3 md:p-5">
+    {/* NAV BAR */}
+    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+      <h1 className="text-3xl md:text-4xl font-bold text-cyan-400">
+        CodeTogether
+      </h1>
+      <div className="flex items-center gap-3">
+        <span className="font-medium text-sm md:text-base">
+          {user?.firstName}
+        </span>
+        <LogoutButton />
       </div>
+    </div>
 
-      <div className="flex gap-5">
-        {/* LEFT PANEL */}
-        <div className="flex flex-col gap-5">
-            {/* USERS PANEL */}
-            <UsersPanel
-              users={users}
-              typingUser={typingUser}
-              ownerId={ownerId}
-              onKick={kickUser}
-            />
-            {/* CHAT PANEL */}
-            <ChatPanel
-              messages={messages}
-              message={message}
-              setMessage={setMessage}
-              sendMessage={sendMessage}
-            />
-        </div>
-        
-        {/* RIGHT PANEL */}
-        <div className="flex-1">
-         {/* TOP BAR */}
-            <div className="flex items-center justify-between mb-4">
-              {/* ROOM INFO */}
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-semibold">
-                  Room :
-                  <span className="text-cyan-400 ml-2">
-                    {roomId}
-                  </span>
-                </h2>
-                {/* COPY BUTTON */}
-                <button
-                  onClick={copyRoomId}
-                  className={`btn btn-sm ${
-                    copied
-                      ? "btn-success"
-                      : "btn-outline btn-info"
-                  }`}
-                >
-                  {
-                    copied
-                      ? "Copied!"
-                      : "CopyLink"
-                  }
-                </button>
-              </div>
-              {/* RIGHT BUTTONS */}
-              <div className="flex gap-3 items-center">
-                {canEdit && <LanguageSelector
-                  language={language}
-                  onChange={handleLanguageChange}
-                />}
-                {canEdit && <RunButton
-                  runButton={runButton}
-                  runCode={runCode}
-                />}
-
-                {/* LEAVE BUTTON */}
-                <button
-                  onClick={leaveRoom}
-                  className="btn btn-error btn-sm"
-                >
-                  Leave
-                </button>
-              </div>
-            </div>
-            {/* EDITOR */}
-            <div className="border border-cyan-500 rounded-xl overflow-hidden">
-              <EditorBox
+    <div className="flex flex-col lg:flex-row gap-5">
+      {/* LEFT PANEL */}
+      <div className="flex flex-col gap-5 w-full lg:w-80 shrink-0">
+        <UsersPanel
+          users={users}
+          typingUser={typingUser}
+          ownerId={ownerId}
+          onKick={kickUser}
+        />
+        <ChatPanel
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          sendMessage={sendMessage}
+        />
+      </div>
+      
+      {/* RIGHT PANEL */}
+      <div className="flex-1 min-w-0">
+        {/* TOP BAR */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+            <h2 className="text-lg md:text-2xl font-semibold truncate">
+              Room: <span className="text-cyan-400 ml-2">{roomId}</span>
+            </h2>
+            <button
+              onClick={copyRoomId}
+              className={`btn btn-sm ${
+                copied ? "btn-success" : "btn-outline btn-info"
+              }`}
+            >
+              {copied ? "Copied!" : "CopyLink"}
+            </button>
+          </div>
+          
+          <div className="flex gap-2 items-center w-full sm:w-auto justify-end">
+            {canEdit && (
+              <LanguageSelector
                 language={language}
-                code={code}
-                onChange={handleCodeChange}
-                onMount={(editor) => (
-                  editorRef.current = editor
-                )}
-                canEdit
+                onChange={handleLanguageChange}
               />
-            </div>
+            )}
+            {canEdit && (
+              <RunButton
+                runButton={runButton}
+                runCode={runCode}
+              />
+            )}
+            <button
+              onClick={leaveRoom}
+              className="btn btn-error btn-sm"
+            >
+              Leave
+            </button>
+          </div>
+        </div>
 
-            {/* INPUT */}
-            <InputPanel
-              input={input}
-              setInput={setInput}
-            />
-            {/* OUTPUT */}
-            <div className="mt-5">
-              <OutputPanel output={output} />
-            </div>
+        {/* EDITOR */}
+        <div className="border border-cyan-500 rounded-xl overflow-hidden w-full">
+          <EditorBox
+            language={language}
+            code={code}
+            onChange={handleCodeChange}
+            onMount={(editor) => (editorRef.current = editor)}
+            canEdit
+          />
+        </div>
+
+        {/* INPUT */}
+        <div className="mt-5">
+          <InputPanel
+            input={input}
+            setInput={setInput}
+          />
+        </div>
+
+        {/* OUTPUT */}
+        <div className="mt-5">
+          <OutputPanel output={output} />
         </div>
       </div>
     </div>
-  );
+  </div> 
+   );
 }
 
 

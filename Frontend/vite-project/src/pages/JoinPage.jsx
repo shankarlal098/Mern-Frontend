@@ -1,40 +1,42 @@
-import { useState } from "react";
+import { useState } from "react"; // Ye line add karo
 import RoomJoin from "../components/room/RoomJoin";
 import { useNavigate } from "react-router-dom";
+
+
+
 
 export default function JoinPage() {
   const [room, setRoom] = useState("");
   const navigate = useNavigate();
-  // JOIN ROOM
+
   function joinRoom() {
     if (!room.trim()) return;
     navigate(`/room/${room}`);
   }
-  // CREATE ROOM
+
   function createRoom() {
-    const randomRoom = Math.random()
-      .toString(36)
-      .substring(2, 8);
+    const randomRoom = Math.random().toString(36).substring(2, 8);
     navigate(`/room/${randomRoom}`);
   }
+
   return (
-    <div className="min-h-screen bg-base-300 text-white p-5">
+    <div className="min-h-screen bg-base-300 text-white p-4 md:p-10 flex flex-col items-center">
       {/* APP TITLE */}
-      <h1 className="text-4xl font-bold mb-6 text-cyan-400">
+      <h1 className="text-3xl md:text-5xl font-bold mb-8 text-cyan-400 text-center">
         CodeTogether
       </h1>
-      <RoomJoin
-        room={room}
-        setRoom={setRoom}
-        joinRoom={joinRoom}
-        createRoom={createRoom}
-      />
-
+      
+      <div className="w-full max-w-lg">
+        <RoomJoin
+          room={room}
+          setRoom={setRoom}
+          joinRoom={joinRoom}
+          createRoom={createRoom}
+        />
+      </div>
     </div>
   );
 }
-
-
 
 
 

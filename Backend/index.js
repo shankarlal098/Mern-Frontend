@@ -15,18 +15,19 @@ const cors = require("cors");
 const CLIENT_URL = process.env.CLIENT_URL;
 
 
+// Socket.io configuration
 const io = new Server(server, {
     cors: {
-        origin: CLIENT_URL,
+        origin: "https://mern-frontend-five-sigma.vercel.app",
         credentials: true
     }
 });
 
+// Express CORS configuration
 app.use(cors({
-    origin: CLIENT_URL,
+    origin: "https://mern-frontend-five-sigma.vercel.app",
     credentials: true
 }));
-
 
 
 
@@ -298,7 +299,7 @@ const connectDBs = async () => {
     console.log("Connected to Mongo");
 
 };
-const PORT = process.env.PORT || 10000;
+const PORT = 10000;
 
 connectDBs()
   .then(() => {
