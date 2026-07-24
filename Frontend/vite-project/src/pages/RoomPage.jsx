@@ -26,17 +26,20 @@ function RoomPage() {
   const [message, setMessage] = useState("");
   const [runButton, setRunButton] = useState("Run");
   const [copied, setCopied] = useState(false);
-  const [ownerId, setOwnerId] = useState("");
-  const [myRole, setMyRole] = useState("viewer");
-    const user = useSelector(
+  const [ownerUserId, setOwnerUserId] = useState(""); 
+   const [myRole, setMyRole] = useState("viewer");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const user = useSelector(
     (state) => state.auth.user
   );
+   console.log(user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { roomId } = useParams();
   const username = user?.firstName;
   const editorRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const profileRef = useRef(null);
 
   const isOwner = myRole === "admin";
   const canEdit = myRole === "admin" || myRole === "editor";
@@ -55,15 +58,15 @@ function RoomPage() {
     socket.on("receive-language", ({ language }) => {
       setLanguage(language);
     });
-    socket.on("room-users", ({ users, ownerId }) => {
-      setUsers(users);
-      setOwnerId(ownerId);
-       const me = users.find(
-         u => u.socketId === socket.id
-       );
-      if (me) {
-       setMyRole(me.role);
-      }
+    socket.on("room-users", ({ users, ownerUserId }) => {
+        setUsers(users);
+        setOwnerUserId(ownerUserId);
+        const me = users.find(
+            u => u.userId === user._id
+        );
+        if (me) {
+            setMyRole(me.role);
+        }
     });
     socket.on("user-typing", (username) => {
       setTypingUser(username);
@@ -105,7 +108,6 @@ function RoomPage() {
       socket.off("join-denied");
       socket.off("receive-output");
       socket.off("system-message");
-
     };
   }, []);
   // JOIN ROOM SOCKE
@@ -117,6 +119,29 @@ function RoomPage() {
         userId: user._id
       });
   }, [roomId, username]);
+
+
+  useEffect(() => {
+      function handleClickOutside(e) {
+        if (
+          profileRef.current &&
+          !profileRef.current.contains(e.target)
+        ) {
+          setShowProfileMenu(false);
+        }
+      }
+
+      document.addEventListener("mousedown", handleClickOutside);
+
+      return () =>
+        document.removeEventListener(
+          "mousedown",
+          handleClickOutside
+        );
+  }, []);
+      
+
+
 
 
   // CODE CHANGE
@@ -242,118 +267,309 @@ function RoomPage() {
     });
   }
 
-    return (
-  <div className="min-h-screen bg-base-300 text-white p-3 md:p-5">
-    {/* NAV BAR */}
-    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-      <h1 className="text-3xl md:text-4xl font-bold text-cyan-400">
-        CodeTogether
-      </h1>
-      <div className="flex items-center gap-3">
-        <span className="font-medium text-sm md:text-base">
-          {user?.firstName}
-        </span>
-        <LogoutButton />
+
+
+  return (
+      <div className="min-h-screen bg-[#0d1117] text-[#e6edf3] p-3 md:p-5">
+        {/* ================= NAVBAR ================= */}
+         <div className="mb-6 rounded-2xl border border-[#30363d] bg-[#161b22] px-5 py-4 shadow-lg">
+
+            <div className="flex items-center justify-between">
+
+              {/* LEFT */}
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-wide text-[#58a6ff]">
+                  CodeTogether
+                </h1>
+
+                <p className="mt-1 text-sm text-[#8b949e]">
+                  Real-time Collaborative Coding Platform
+                </p>
+              </div>
+
+              {/* RIGHT */}
+              <div
+                ref={profileRef}
+                className="relative"
+              >
+
+                <button
+                  onClick={() =>
+                    setShowProfileMenu(!showProfileMenu)
+                  }
+                  className="
+                    group
+                    flex
+                    items-center
+                    gap-3
+                    rounded-xl
+                    border
+                    border-[#30363d]
+                    bg-[#0d1117]
+                    px-3
+                    py-2
+                    transition-all
+                    duration-300
+                    hover:border-[#58a6ff]
+                    hover:bg-[#161b22]
+                    hover:shadow-lg
+                    active:scale-[0.98]
+                  "
+                >
+
+                  {/* Avatar */}
+                  <div
+                    className="
+                      flex
+                      h-10
+                      w-10
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-[#2563eb]
+                      font-bold
+                      text-white
+                      shadow-md
+                      transition-all
+                      duration-300
+                      group-hover:scale-105
+                    "
+                  >
+                    {user?.firstName?.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Name */}
+                  <div className="hidden sm:flex flex-col text-left">
+
+                    <span className="font-semibold text-white">
+                      {user?.firstName}
+                    </span>
+
+                    <span className="text-xs text-[#8b949e]">
+                      My Account
+                    </span>
+
+                  </div>
+
+                  {/* Arrow */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-4 w-4 text-[#8b949e] transition-all duration-300 ${
+                      showProfileMenu ? "rotate-180 text-[#58a6ff]" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+
+                </button>
+
+                {/* Dropdown */}
+                <div
+                  className={`
+                    absolute
+                    right-0
+                    top-full
+                    mt-3
+                    w-56
+                    overflow-hidden
+                    rounded-xl
+                    border
+                    border-[#30363d]
+                    bg-[#161b22]/95
+                    backdrop-blur-md
+                    shadow-[0_10px_40px_rgba(0,0,0,0.45)]
+                    z-50
+                    origin-top-right
+                    transition-all
+                    duration-300
+                    ease-out
+
+                    ${
+                      showProfileMenu
+                        ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                        : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
+                    }
+                  `}
+                >
+
+                  {/* Profile Info */}
+                  <div className="border-b border-[#30363d] px-4 py-4">
+
+                    <div className="flex items-center gap-3">
+
+                      <div
+                        className="
+                          flex
+                          h-10
+                          w-10
+                          items-center
+                          justify-center
+                          rounded-full
+                          bg-[#2563eb]
+                          font-bold
+                          text-white
+                        "
+                      >
+                        {user?.firstName?.charAt(0).toUpperCase()}
+                      </div>
+
+                      <div>
+
+                        <p className="font-semibold text-white">
+                          {user?.firstName}
+                        </p>
+
+                        <p className="text-xs text-[#8b949e]">
+                          Signed In
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  {/* Logout */}
+                  <div className="p-2">
+                    <LogoutButton />
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+        </div>
+
+        {/* ================= MAIN LAYOUT ================= */}
+        <div className="flex flex-col gap-5 lg:flex-row">
+
+            {/* ================= LEFT PANEL ================= */}
+            <div className="flex w-full flex-col gap-5 lg:w-80 shrink-0">
+               <UsersPanel
+                  users={users}
+                  typingUser={typingUser}
+                  ownerUserId={ownerUserId}
+                  myRole={myRole}
+                  currentUserId={user?._id}
+                  onKick={kickUser}
+                />
+
+                <ChatPanel
+                  messages={messages}
+                  message={message}
+                  setMessage={setMessage}
+                  sendMessage={sendMessage}
+                />
+            </div>
+
+            {/* ================= RIGHT PANEL ================= */}
+            <div className="flex-1 min-w-0">
+
+              {/* ================= ROOM HEADER ================= */}
+              <div className="mb-5 rounded-2xl border border-[#30363d] bg-[#161b22] px-5 py-4 shadow-lg">
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                  <div className="flex items-center gap-4 flex-wrap">
+
+                    <div>
+                      <p className="text-sm text-[#8b949e]">
+                        Current Room
+                      </p>
+
+                      <h2 className="text-xl md:text-2xl font-bold">
+                        {roomId}
+                      </h2>
+                    </div>
+
+                    <button
+                      onClick={copyRoomId}
+                      className={`rounded-lg px-4 py-2 text-sm transition-all duration-200 ${
+                        copied
+                          ? "bg-[#238636] text-white"
+                          : "border border-[#30363d] hover:border-[#58a6ff] hover:text-[#58a6ff]"
+                      }`}
+                    >
+                      {copied ? "Copied ✓" : "Copy Link"}
+                    </button>
+
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+
+                    {canEdit && (
+                      <LanguageSelector
+                        language={language}
+                        onChange={handleLanguageChange}
+                      />
+                    )}
+
+                    {canEdit && (
+                      <RunButton
+                        runButton={runButton}
+                        runCode={runCode}
+                      />
+                    )}
+
+                    <button
+                      onClick={leaveRoom}
+                      className="rounded-lg bg-[#da3633] px-5 py-2 text-white transition hover:opacity-90"
+                    >
+                      Leave Room
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* ================= EDITOR ================= */}
+              <div className="overflow-hidden rounded-2xl border border-[#30363d] bg-[#161b22] shadow-xl">
+
+                <EditorBox
+                  language={language}
+                  code={code}
+                  onChange={handleCodeChange}
+                  onMount={(editor) => (editorRef.current = editor)}
+                  canEdit={canEdit}
+                />
+
+              </div>
+
+              {/* ================= INPUT ================= */}
+              <div className="mt-5 rounded-2xl border border-[#30363d] bg-[#161b22] p-4 shadow-lg">
+
+                <InputPanel
+                  input={input}
+                  setInput={setInput}
+                />
+
+              </div>
+
+              {/* ================= OUTPUT ================= */}
+              <div className="mt-5 rounded-2xl border border-[#30363d] bg-[#161b22] p-4 shadow-lg">
+
+                <OutputPanel output={output} />
+
+              </div>
+
+            </div>
+
+        </div>
       </div>
-    </div>
-
-    <div className="flex flex-col lg:flex-row gap-5">
-      {/* LEFT PANEL */}
-      <div className="flex flex-col gap-5 w-full lg:w-80 shrink-0">
-        <UsersPanel
-          users={users}
-          typingUser={typingUser}
-          ownerId={ownerId}
-          onKick={kickUser}
-        />
-        <ChatPanel
-          messages={messages}
-          message={message}
-          setMessage={setMessage}
-          sendMessage={sendMessage}
-        />
-      </div>
-      
-      {/* RIGHT PANEL */}
-      <div className="flex-1 min-w-0">
-        {/* TOP BAR */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-            <h2 className="text-lg md:text-2xl font-semibold truncate">
-              Room: <span className="text-cyan-400 ml-2">{roomId}</span>
-            </h2>
-            <button
-              onClick={copyRoomId}
-              className={`btn btn-sm ${
-                copied ? "btn-success" : "btn-outline btn-info"
-              }`}
-            >
-              {copied ? "Copied!" : "CopyLink"}
-            </button>
-          </div>
-          
-          <div className="flex gap-2 items-center w-full sm:w-auto justify-end">
-            {canEdit && (
-              <LanguageSelector
-                language={language}
-                onChange={handleLanguageChange}
-              />
-            )}
-            {canEdit && (
-              <RunButton
-                runButton={runButton}
-                runCode={runCode}
-              />
-            )}
-            <button
-              onClick={leaveRoom}
-              className="btn btn-error btn-sm"
-            >
-              Leave
-            </button>
-          </div>
-        </div>
-
-        {/* EDITOR */}
-        <div className="border border-cyan-500 rounded-xl overflow-hidden w-full">
-          <EditorBox
-            language={language}
-            code={code}
-            onChange={handleCodeChange}
-            onMount={(editor) => (editorRef.current = editor)}
-            canEdit
-          />
-        </div>
-
-        {/* INPUT */}
-        <div className="mt-5">
-          <InputPanel
-            input={input}
-            setInput={setInput}
-          />
-        </div>
-
-        {/* OUTPUT */}
-        <div className="mt-5">
-          <OutputPanel output={output} />
-        </div>
-      </div>
-    </div>
-  </div> 
-   );
+  );
 }
-
-
-
-
-
-
-// also bahi ye bhi samja ek baar fir se .unwrap kya hota hai jo dispatch me hai vo in logiyut
-
-
-
-
-
 
 export default RoomPage;
 
@@ -364,6 +580,18 @@ export default RoomPage;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+// also bahi ye bhi samja ek baar fir se .unwrap kya hota hai jo dispatch me hai vo in logiyut
 // Notes 
 // YE BAKI HAI 
 //  1.Bhai sun redux me apen jo user name sstore kra erha hai vo refresh me ht jata hai kiyuki page refrese so 

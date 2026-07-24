@@ -41,7 +41,7 @@ const runCode = async (req, res) => {
        ];
 
         const submitResult = await SubmitBatch(submission);
-
+        
         const tokens = submitResult.map((value) => {
             return value.token;
         });
@@ -58,6 +58,4 @@ const runCode = async (req, res) => {
 };
 
 
-module.exports = {
-    runCode
-};
+module.exports = { runCode };

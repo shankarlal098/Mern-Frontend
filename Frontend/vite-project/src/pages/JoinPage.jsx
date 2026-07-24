@@ -1,7 +1,6 @@
-import { useState } from "react"; // Ye line add karo
+import { useState } from "react";
 import RoomJoin from "../components/room/RoomJoin";
 import { useNavigate } from "react-router-dom";
-
 
 
 
@@ -20,25 +19,31 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-base-300 text-white p-4 md:p-10 flex flex-col items-center">
-      {/* APP TITLE */}
-      <h1 className="text-3xl md:text-5xl font-bold mb-8 text-cyan-400 text-center">
-        CodeTogether
-      </h1>
-      
+    <div className="min-h-screen bg-[#0d1117] flex items-center justify-center px-4">
+
       <div className="w-full max-w-lg">
+
+        <div className="mb-10 text-center">
+
+          <h1 className="text-5xl font-bold text-white tracking-tight">
+            Code<span className="text-[#58a6ff]">Together</span>
+          </h1>
+
+          <p className="mt-3 text-[#8b949e]">
+            Real-time collaborative coding platform
+          </p>
+
+        </div>
+
         <RoomJoin
           room={room}
           setRoom={setRoom}
           joinRoom={joinRoom}
           createRoom={createRoom}
         />
+
       </div>
+
     </div>
   );
 }
-
-
-
-//  undersant the replace button bhai and bhai ab leetcode ko bhi fir se strtt kr or deply kr usko
-// yarr important hai bhai vo karna bhai 

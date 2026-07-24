@@ -8,6 +8,7 @@ authRouter.post('/login' , login);
 authRouter.post('/logout' , userMiddelware ,  logout);
 
 authRouter.get('/check' , userMiddelware , (req , res)=>{
+     console.log("aa rhi hai request ");
      const reply = {
         firstName : req.result.firstName,
         emailId:req.result.emailId,

@@ -77,7 +77,7 @@ function Signup() {
           </h2>
 
           {/* SERVER ERROR */}
-
+          {/* Check here bro  how to access actual messahe bro backnd opuut object is it error.messahe or errro.messahe.meessage */}
           {error && (
             <p className="text-error text-center mb-3">
               {error.message ||"Something went wrong. Please try again."}
