@@ -19,6 +19,7 @@ export default function useVoiceChat({
     const localStream = useRef(null);
     const remoteStreams = useRef(new Map());
     const [isMuted, setIsMuted] = useState(false);
+    const [isJoiningVoice, setIsJoiningVoice] = useState(false);
     
 
 
@@ -91,6 +92,8 @@ export default function useVoiceChat({
         // =========================================
 
         setIsMuted(false);
+        setIsStarting(false);
+        setIsJoiningVoice(false);
 
     };
     const toggleMute = () => {
@@ -126,32 +129,29 @@ export default function useVoiceChat({
 
     };
     const handleStartVoice = async () => {
-
-    try {
-
-        await initializeLocalStream();
-        console.log("event succesfully fire bhai abhi to ")
-        socket.emit("voice-start", {
-
-            room: roomId,
-            userId: user._id,
-            username,
-            sessionId
-
-        });
-
-    }
-    catch (error) {
-        console.log(error);
-    }
-
+        // double click prevent
+        if (isStarting || voiceActive) return;
+        setIsStarting(true);
+        try {
+            await initializeLocalStream();
+            console.log("event successfully fired");
+            socket.emit("voice-start", {
+                room: roomId,
+                userId: user._id,
+                username,
+                sessionId
+            });
+        } catch (error) {
+            console.log(error);
+            // mic permission/error hua to button wapas enable
+            setIsStarting(false);
+        }
     };
     const handleJoinVoice = async () => {
-
+        if (isJoiningVoice) return;
         try {
-
+            setIsJoiningVoice(true);
             await initializeLocalStream();
-
             socket.emit("join-voice", {
 
                 room: roomId,
@@ -163,9 +163,8 @@ export default function useVoiceChat({
 
         }
         catch (error) {
-
             console.log(error);
-
+            setIsJoiningVoice(false);
         }
 
     };
@@ -235,6 +234,8 @@ export default function useVoiceChat({
                 event.candidate.candidate
                 );
             }
+
+            console.log("mill gya");
             socket.emit("voice-ice-candidate", {
 
                 room: roomId,
@@ -452,11 +453,6 @@ export default function useVoiceChat({
     });
 
     };
-    function handleStartbutton() {
-        if (isStarting || voiceActive) return;
-        setIsStarting(true);
-        // socket.emit("start-voice");
-    }
 
 
 
@@ -526,8 +522,9 @@ export default function useVoiceChat({
         remoteStreamsState,
         isMuted,
 
-        handleStartbutton,
-        isStarting
+        isStarting,
+        setIsStarting,
+        isJoiningVoice
         
     };
 }

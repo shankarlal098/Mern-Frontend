@@ -160,7 +160,7 @@ async function disconnect(io, socket) {
                 }
             );
 
-        }, 60000)
+        }, 10000)
 
     );
 

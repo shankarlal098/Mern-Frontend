@@ -69,8 +69,9 @@ function RoomPage() {
     remoteStreamsState,
     localStream,
     isMuted,
-    handleStartbutton,
-    isStarting
+    isStarting,
+    setIsStarting,
+    isJoiningVoice
 
             } = useVoiceChat({
                 socket,
@@ -522,8 +523,9 @@ function RoomPage() {
                     localStream = {localStream}
                     isMuted = {isMuted}
                     toggleMute = {toggleMute}
-                     handleStartbutton={handleStartbutton}
-                      isStarting={isStarting}
+                    isStarting =  {isStarting}
+                    setIsStarting = {setIsStarting}
+                    isJoiningVoice = {isJoiningVoice}
                 />
 
                 <ChatPanel

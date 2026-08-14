@@ -15,6 +15,9 @@ export default function VoicePanel({
 
   isMuted,
   toggleMute,
+  isStarting,
+  setIsStarting,
+  isJoiningVoice
 }) {
   // ============================================
   // REMOTE AUDIO ELEMENT REFERENCES
@@ -115,10 +118,22 @@ export default function VoicePanel({
             </p>
 
             <button
-              onClick={onStartVoice}
-              className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-500 active:scale-[0.98]"
-            >
-              🎙️ Start Voice
+                onClick={onStartVoice}
+                disabled={isStarting}
+                className={`
+                    w-full rounded-lg px-4 py-2.5
+                    text-sm font-medium text-white
+                    transition
+
+                    ${
+                        isStarting
+                            ? "bg-green-800 cursor-not-allowed opacity-60"
+                            : "bg-green-600 hover:bg-green-500 active:scale-[0.98]"
+                    }
+                `}>
+                  {isStarting
+                      ? "Starting..."
+                      : "🎙️ Start Voice"}
             </button>
 
           </div>
@@ -243,12 +258,24 @@ export default function VoicePanel({
 
               <div className="mt-6 border-t border-[#30363d] pt-5">
 
-                <button
+               <button
                   onClick={handleJoinVoice}
-                  className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 active:scale-[0.98]"
+                  disabled={isJoiningVoice}
+                  className={`
+                      w-full rounded-lg px-4 py-2.5
+                      text-sm font-medium text-white
+                      transition
+                      ${
+                          isJoiningVoice
+                              ? "bg-blue-800 cursor-not-allowed opacity-60"
+                              : "bg-blue-600 hover:bg-blue-500 active:scale-[0.98]"
+                      }
+                  `}
                 >
-                  🔊 Join Voice
-                </button>
+                  {isJoiningVoice
+                      ? "Joining..."
+                      : "🔊 Join Voice"}
+              </button>
 
               </div>
 

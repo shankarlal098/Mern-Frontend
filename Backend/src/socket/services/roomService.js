@@ -160,7 +160,16 @@ async function joinRoom(io, socket, payload) {
                 roomData.ownerUserId
         }
     );
+    // ===========================
+    // RESTORE VOICE STATE
+    // ===========================
 
+    socket.emit("voice-users", {
+        voiceUsers: roomData.voiceUsers || [],
+        voiceActive:
+            roomData.voiceUsers &&
+            roomData.voiceUsers.length > 0
+    });
     // ===========================
     // OLD CHAT
     // ===========================
