@@ -5,8 +5,8 @@ const {
 
  function registerRoomHandlers(io, socket) {
 
-    socket.on("join-room", async ({ room, username, userId }) => {
-        await joinRoom(io, socket, { room, username, userId });
+    socket.on("join-room", async ({ room, username, userId , sessionId}) => {
+        await joinRoom(io, socket, { room, username, userId , sessionId});
     });
 
     socket.on("leave-room", async ({ room }) => {

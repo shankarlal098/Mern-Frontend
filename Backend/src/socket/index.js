@@ -5,6 +5,8 @@ const registerEditorHandlers = require("./handlers/editorHandler");
 const registerChatHandlers  = require("./handlers/chatHandler");
 const registerModerationHandler = require("./handlers/moderationHandler");
 const registerDisconnectHandler = require("./handlers/disconnectHandler");
+const registerVoiceHandlers = require("./handlers/voiceHandler");
+
 function initializeSocket(server){
     const io = new Server(server,{
         cors:{
@@ -18,6 +20,7 @@ function initializeSocket(server){
         registerChatHandlers(io, socket);
         registerModerationHandler(io, socket);
         registerDisconnectHandler(io, socket); 
+        registerVoiceHandlers(io, socket);
     });
 }
 

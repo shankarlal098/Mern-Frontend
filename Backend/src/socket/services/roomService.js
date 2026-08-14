@@ -1,146 +1,324 @@
 const {
     rooms,
     roomMessages,
-    disconnectTimers
+    disconnectTimers,
+    cleanupVoiceUser
 } = require("../socketStore");
 
 const redis = require("../../confi/redis");
+async function joinRoom(io, socket, payload) {
+     console.log("payloaf"  ,  payload);
+    const { room, username, userId, sessionId } = payload;
 
-async function joinRoom(io, socket, payload) {         
-            const { room, username, userId } = payload;
-            socket.room = room;
-            socket.userId = userId;
+    socket.room = room;
+    socket.userId = userId;
+    socket.sessionId = sessionId;
+    // ===========================
+    // USER BANNED ?
+    // ===========================
+    const isBanned = await redis.exists(
+        `room:${room}:banned:${userId}`
+    );
 
-            const isBanned = await redis.exists(`room:${room}:banned:${userId}`);
-            if (isBanned) {
-                socket.emit("join-denied", "You are banned from this room");
-                return;
-            }
+    if (isBanned) {
 
-            // RECONNECT ?
-            if (disconnectTimers.has(userId)) {
-                clearTimeout(disconnectTimers.get(userId));
-                disconnectTimers.delete(userId);
-            }
-            let role = "editor";
-                if (!rooms[room]) {
-                        role = "admin";
+        socket.emit(
+            "join-denied",
+            "You are banned from this room"
+        );
 
-                        rooms[room] = {
-                            ownerUserId: userId,
-                            maxUsers: 5,
-                            users: []
-                        };
-            }
+        return;
+    }
 
-            const roomData = rooms[room];
-            const existingUser = roomData.users.find(
-                user => user.userId === userId
+    // ===========================
+    // CREATE ROOM
+    // ===========================
+    if (!rooms[room]) {
+
+        rooms[room] = {
+
+            ownerUserId: userId,
+            maxUsers: 5,
+            users: []
+
+        };
+
+    }
+
+    const roomData = rooms[room];
+
+    socket.join(room);
+
+    // ======================================
+    // RECONNECT
+    // ======================================
+    if (disconnectTimers.has(sessionId)) {
+
+        clearTimeout(
+            disconnectTimers.get(sessionId)
+        );
+
+        disconnectTimers.delete(sessionId);
+
+        const reconnectUser =
+            roomData.users.find(
+                user =>
+                    user.sessionId === sessionId
             );
-            socket.join(room);
 
-            if (existingUser) {
+        if (reconnectUser) {
 
-                existingUser.socketId = socket.id;
-                existingUser.online = true;
+            // Was every tab offline?
+            const wasOffline =
+                !roomData.users.some(
+                    user =>
+                        user.userId === userId &&
+                        user.online
+                );
 
-                socket.to(room).emit("system-message", {
-                    type: "online",
-                    text: `${existingUser.username} reconnected`
-                });
+            reconnectUser.socketId = socket.id;
+            reconnectUser.online = true;
 
-            } else {
-                if (roomData.users.length >= roomData.maxUsers) {
-                    role = "viewer";
-                }
+            if (wasOffline) {
 
+                socket.to(room).emit(
+                    "system-message",
+                    {
+                        type: "online",
+                        text: `${reconnectUser.username} reconnected`
+                    }
+                );
 
-                roomData.users.push({
-                    socketId: socket.id,
-                    username,
-                    userId,
-                    role,
-                    online: true
-                });
+            }
 
-                socket.to(room).emit("system-message", {
+        }
+
+    }
+
+    // ======================================
+    // NEW TAB / NEW SESSION
+    // ======================================
+    else {
+
+        let role = "editor";
+
+        if (roomData.ownerUserId === userId) {
+
+            role = "admin";
+
+        }
+        else if (
+            roomData.users.length >=
+            roomData.maxUsers
+        ) {
+
+            role = "viewer";
+
+        }
+
+        // Already present in another tab?
+        const alreadyPresent =
+            roomData.users.some(
+                user =>
+                    user.userId === userId
+            );
+
+        roomData.users.push({
+
+            socketId: socket.id,
+            username,
+            userId,
+            sessionId,
+            role,
+            online: true
+
+        });
+
+        // Only first tab should announce join
+        if (!alreadyPresent) {
+
+            socket.to(room).emit(
+                "system-message",
+                {
                     type: "join",
                     text: `${username} joined the room`
-                });
-            }
+                }
+            );
 
-            io.to(room).emit("room-users", {
-                users: roomData.users,
-                ownerUserId: roomData.ownerUserId
-            });
+        }
 
-            if (roomMessages[room]) {
-                socket.emit("previous-messages", roomMessages[room]);
-            }
+    }
 
-            const existingRoom = await redis.get(`room:${room}`);
-            if (existingRoom) {
-                socket.emit(
-                    "receive-code",
-                    JSON.parse(existingRoom)
-                );
-            }
+    // ===========================
+    // USERS UPDATE
+    // ===========================
+    io.to(room).emit(
+        "room-users",
+        {
+            users: roomData.users,
+            ownerUserId:
+                roomData.ownerUserId
+        }
+    );
+
+    // ===========================
+    // OLD CHAT
+    // ===========================
+    if (roomMessages[room]) {
+
+        socket.emit(
+            "previous-messages",
+            roomMessages[room]
+        );
+
+    }
+
+    // ===========================
+    // RESTORE CODE
+    // ===========================
+    const existingRoom =
+        await redis.get(`room:${room}`);
+
+    if (existingRoom) {
+
+        socket.emit(
+            "receive-code",
+            JSON.parse(existingRoom)
+        );
+
+    }
+
 }
 
- function leaveRoom(io, socket, payload) {
-            const { room } = payload;
-            socket.leave(room);
-            if (!rooms[room]) return;
+function leaveRoom(io, socket, payload) {
 
-            const roomData = rooms[room];
+    const { room } = payload;
 
-            // IF ANY RECONNECT TIMER EXISTS, CANCEL IT
-            if (disconnectTimers.has(socket.userId)) {
-                clearTimeout(disconnectTimers.get(socket.userId));
-                disconnectTimers.delete(socket.userId);
-            }
+    socket.leave(room);
 
-            const leavingUser = roomData.users.find(
-                user => user.userId === socket.userId
-            );
+    if (!rooms[room]) return;
 
-            if (!leavingUser) return;
+    const roomData = rooms[room];
 
-            // REMOVE USER
-            roomData.users = roomData.users.filter(
-                user => user.userId !== socket.userId
-            );
+    // CANCEL RECONNECT TIMER
+    if (disconnectTimers.has(socket.sessionId)) {
 
-            io.to(room).emit("system-message", {
+        clearTimeout(
+            disconnectTimers.get(socket.sessionId)
+        );
+
+        disconnectTimers.delete(socket.sessionId);
+
+    }
+
+    
+    const leavingUser = roomData.users.find(
+        user => user.sessionId === socket.sessionId
+    );
+
+    if (!leavingUser) return;
+
+    // REMOVE ONLY CURRENT SESSION
+    roomData.users = roomData.users.filter(
+        user => user.sessionId !== socket.sessionId
+    );
+
+    // ==================================
+    // SEND LEAVE ONLY IF LAST TAB CLOSED
+    // ==================================
+    const remainingSessions =
+        roomData.users.some(
+            user => user.userId === socket.userId
+        );
+
+    if (!remainingSessions) {
+
+        io.to(room).emit(
+            "system-message",
+            {
                 type: "leave",
                 text: `${leavingUser.username} left the room`
-            });
+            }
+        );
 
-            // OWNER TRANSFER
-            if (roomData.ownerUserId === socket.userId) {
+    }
 
-                if (roomData.users.length > 0) {
-                    roomData.ownerUserId = roomData.users[0].userId;
-                } else {
-                    roomData.ownerUserId = null;
-                }
+    // ==================================
+    // OWNER TRANSFER
+    // ==================================
+    if (roomData.ownerUserId === socket.userId) {
+
+        const ownerStillOnline =
+            roomData.users.some(
+                user =>
+                    user.userId === socket.userId &&
+                    user.online
+            );
+
+        if (!ownerStillOnline) {
+
+            const nextOwner =
+                roomData.users.find(
+                    user => user.online
+                );
+
+            if (nextOwner) {
+
+                roomData.ownerUserId =
+                    nextOwner.userId;
+
+                // NEXT OWNER KI SAARI TABS ADMIN
+                roomData.users.forEach(user => {
+
+                    if (
+                        user.userId === nextOwner.userId
+                    ) {
+
+                        user.role = "admin";
+
+                    }
+
+                });
+
+            }
+            else {
+
+                roomData.ownerUserId = null;
+
             }
 
-            // ROOM EMPTY
-            if (roomData.users.length === 0) {
-                delete rooms[room];
-                delete roomMessages[room];
-                return;
-            }
+        }
 
-            io.to(room).emit("room-users", {
-                users: roomData.users,
-                ownerUserId: roomData.ownerUserId
-            });
+    }
 
-            socket.room = null;
+    // ROOM EMPTY
+    if (roomData.users.length === 0) {
+
+        delete rooms[room];
+        delete roomMessages[room];
+        return;
+
+    }
+
+    io.to(room).emit(
+        "room-users",
+        {
+            users: roomData.users,
+            ownerUserId: roomData.ownerUserId
+        }
+    );
+
+   // clean up voicechat
+
+    cleanupVoiceUser(
+        io,
+        socket,
+        room
+    );
+
+    socket.room = null;
+
 }
-
 module.exports = {
     joinRoom,
     leaveRoom

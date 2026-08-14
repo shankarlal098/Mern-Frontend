@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { socket } from "../socket/socket";  // only created ones ye hi dusri me bhi lihenet ot connections same to server// for detail go socket.js
 import UsersPanel from "../components/room/UsersPanel";
@@ -13,8 +13,12 @@ import axiosClient from  "../utils/axiosClient";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../redux/authSlice";
 import LogoutButton  from "../components/auth/LogoutButton";
+import { useMemo } from "react";
+import VoicePanel from "../components/voice/VoicePanel";
+import { useRef } from "react";
+import useVoiceChat from "../hooks/useVoiceChat";
 
-//   editor ko sahi karna baki hai ab tk mtlb foiles or baki add karna bhi
+//editor ko sahi karna baki hai ab tk mtlb foiles or baki add karna bhi
 function RoomPage() {
   const [typingUser, setTypingUser] = useState("");
   const [code, setCode] = useState("//code here");
@@ -27,8 +31,10 @@ function RoomPage() {
   const [runButton, setRunButton] = useState("Run");
   const [copied, setCopied] = useState(false);
   const [ownerUserId, setOwnerUserId] = useState(""); 
-   const [myRole, setMyRole] = useState("viewer");
+  const [myRole, setMyRole] = useState("viewer");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+
   const user = useSelector(
     (state) => state.auth.user
   );
@@ -40,11 +46,40 @@ function RoomPage() {
   const editorRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const profileRef = useRef(null);
-
   const isOwner = myRole === "admin";
   const canEdit = myRole === "admin" || myRole === "editor";
+  const sessionId = useMemo(() => {
+      let id = sessionStorage.getItem("session");
+      if (!id) {
+          id = crypto.randomUUID();
+          sessionStorage.setItem("session", id);
+      }
+      return id;
+  }, []);
 
-  
+  // Web RtC
+  const {
+    voiceUsers,
+    voiceActive,
+    handleStartVoice,
+    handleJoinVoice,
+    leaveVoice,
+    toggleMute,
+    connectionStates,
+    remoteStreamsState,
+    localStream,
+    isMuted,
+    handleStartbutton,
+    isStarting
+
+            } = useVoiceChat({
+                socket,
+                roomId,
+                user,
+                username,
+                sessionId,
+                 });
+
 
   // SOCKET LISTENERS
   useEffect(() => {
@@ -95,6 +130,7 @@ function RoomPage() {
     socket.on("system-message",(message) => {
        setMessages(prev => [...prev,{system: true,text: message.text}])
     });
+  
     return () => { // this will run also when page unmount/navigate(/) run...
       clearTimeout(typingTimeoutRef.current);
       socket.off("receive-code");
@@ -110,16 +146,22 @@ function RoomPage() {
       socket.off("system-message");
     };
   }, []);
+
   // JOIN ROOM SOCKE
   useEffect(() => {
-    if (!roomId || !username) return;
+
+      if (!roomId || !username || !user?._id) return;
+
       socket.emit("join-room", {
         room: roomId,
         username,
-        userId: user._id
+        userId: user._id,
+        sessionId
       });
-  }, [roomId, username]);
 
+      console.log(sessionId);
+
+  }, [roomId, username, user?._id, sessionId]);
 
   useEffect(() => {
       function handleClickOutside(e) {
@@ -140,8 +182,6 @@ function RoomPage() {
         );
   }, []);
       
-
-
 
 
   // CODE CHANGE
@@ -266,7 +306,6 @@ function RoomPage() {
       targetUserId: targetUser.userId
     });
   }
-
 
 
   return (
@@ -455,6 +494,7 @@ function RoomPage() {
 
             {/* ================= LEFT PANEL ================= */}
             <div className="flex w-full flex-col gap-5 lg:w-80 shrink-0">
+               {/* // isme grouping baki hai vo doicks wali like shankar (4) wali types  */}
                <UsersPanel
                   users={users}
                   typingUser={typingUser}
@@ -462,6 +502,28 @@ function RoomPage() {
                   myRole={myRole}
                   currentUserId={user?._id}
                   onKick={kickUser}
+                />
+
+               <VoicePanel
+                    onStartVoice={handleStartVoice}
+                    handleJoinVoice={handleJoinVoice}
+                    onLeaveVoice = {leaveVoice}
+
+
+                    voiceActive={voiceActive}
+                    voiceUsers={voiceUsers}
+
+
+                    currentUserId={user?._id}
+                    sessionId = {sessionId}
+                    connectionStates = {connectionStates}
+                   
+                    remoteStreamsState = {remoteStreamsState}
+                    localStream = {localStream}
+                    isMuted = {isMuted}
+                    toggleMute = {toggleMute}
+                     handleStartbutton={handleStartbutton}
+                      isStarting={isStarting}
                 />
 
                 <ChatPanel

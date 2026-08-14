@@ -8,8 +8,16 @@ export default function UsersPanel({
   currentUserId,
   onKick,
 }) {
-  const onlineUsers = users.filter((user) => user.online).length;
 
+    const onlineUsers = new Set(
+        users
+          .filter((user) => user.online)
+          .map((user) => user.userId?.toString())
+      ).size;
+
+    const totalUsers = new Set(
+      users.map((user) => user.userId?.toString())
+    ).size;
   return (
     <div className="w-full rounded-xl border border-[#30363d] bg-[#161b22] shadow-lg">
       {/* Header */}
@@ -19,7 +27,7 @@ export default function UsersPanel({
         </h2>
 
         <p className="mt-1 text-sm text-gray-400">
-          {onlineUsers} Online • {users.length} Total
+          {onlineUsers} Online • {totalUsers} Total
         </p>
       </div>
 
@@ -84,19 +92,29 @@ export default function UsersPanel({
               </div>
             </div>
 
-            {myRole === "admin" &&
-              u.userId !== currentUserId &&
-              u.online && (
+           {myRole === "admin" &&
+              u.userId?.toString() !== currentUserId?.toString() &&
+              u.role !== "admin" && (
                 <button
                   onClick={() => onKick(u)}
                   className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-400 transition hover:bg-red-500 hover:text-white"
                 >
                   Kick
                 </button>
-              )}
+            )}
           </div>
         ))}
       </div>
     </div>
   );
 }
+
+// // isme grouping baki hai vo doicks wali like shankar (4) wali types 
+// abhi hai 
+// 🟢 Shankar 👑
+// 🟢 Shankar 👑
+// ⚪ Shankar 👑
+
+// gorping ke baad
+// 🟢 Shankar 👑
+//    3 Tabs Open

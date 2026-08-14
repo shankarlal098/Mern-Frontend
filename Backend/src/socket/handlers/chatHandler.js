@@ -11,3 +11,14 @@ const {sendMessage  , shareOutput} = require("../services/chatService");
 }
 
 module.exports =  registerChatHandlers ;
+
+
+
+// 🔥 Ab backend ka ownership flow complete hai:
+// ✅ Same tab refresh → reconnect
+// ✅ New tab → new session
+// ✅ Owner ki multiple tabs → sab admin
+// ✅ Owner ki ek tab band → transfer nahi
+// ✅ Owner ki last online tab gayi → next online user owner
+// ✅ Next owner ki saari tabs admin ban jayengi
+// ✅ Kick logic bhi iske saath compatible rahega
