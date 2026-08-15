@@ -7,9 +7,8 @@ const app = express();
 
 /// ataached the express code to htttp server 
 const server = http.createServer(app);
-
-
 const { Server } = require("socket.io");
+
 
 const redis = require('./src/confi/redis');
 const main = require('./src/confi/db')
@@ -26,14 +25,19 @@ const initializeSocket=require("./src/socket/index");
 
 
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: "https://codetogether-mu.vercel.app",
     credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
-
 app.use('/problem', codeRouter);
 app.use('/user' , authRouter);
+
+
+
+
+
+
 
 
 const connectDBs = async () => {
@@ -45,12 +49,10 @@ const connectDBs = async () => {
     console.log("Connected to Mongo");
 
 };
-const PORT = 3000;
-
 connectDBs()
   .then(() => {
         initializeSocket(server);
-        server.listen(PORT, () => {
+        server.listen(process.env.PORT, () => {
         console.log(`Listening on ${PORT}`);
     });
   })
