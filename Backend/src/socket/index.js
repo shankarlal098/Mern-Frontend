@@ -10,7 +10,7 @@ const registerVoiceHandlers = require("./handlers/voiceHandler");
 function initializeSocket(server){
     const io = new Server(server,{
         cors:{
-            origin:"http://localhost:5173",
+            origin:"https://codetogether-mu.vercel.app",
             credentials:true
         }
     });
