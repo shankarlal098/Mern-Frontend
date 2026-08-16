@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://full-stack-event-wus1.onrender.com";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://code-together-1g0z.onrender.com";
 
 export const socket = io(BACKEND_URL  , {
   autoConnect: true,
