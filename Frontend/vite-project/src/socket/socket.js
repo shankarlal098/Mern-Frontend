@@ -1,6 +1,8 @@
 import { io } from "socket.io-client";
-export const socket = io("import.meta.env.VITE_BACKEND_URL");
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://full-stack-event-wus1.onrender.com";
 
-// when io() call first it will check is "http://localhost:3000" this location is already connceted ifn yes then returnobject of its soket 
-// esle connet it 3 hand sahke w
+export const socket = io(BACKEND_URL, {
+  autoConnect: true,
+  transports: ["websocket", "polling"]
+});
