@@ -28,6 +28,8 @@ app.use(cors({
     origin: "https://codetogether-mu.vercel.app",
     credentials: true
 }));
+
+// https://codetogether-mu.vercel.app
 app.use(express.json());
 app.use(cookieParser());
 app.use('/problem', codeRouter);
@@ -53,7 +55,7 @@ connectDBs()
   .then(() => {
         initializeSocket(server);
         server.listen(process.env.PORT, () => {
-        console.log(`Listening on ${PORT}`);
+        console.log(`Listening on ${process.env.PORT}`);
     });
   })
   .catch((err) => {
