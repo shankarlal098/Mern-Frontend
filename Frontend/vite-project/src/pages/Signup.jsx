@@ -19,8 +19,8 @@ const signupSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Must contain uppercase, lowercase and number"
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Must contain uppercase, lowercase, number, and special character"
     ),
 });
 

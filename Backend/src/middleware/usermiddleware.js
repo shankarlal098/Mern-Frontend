@@ -10,8 +10,6 @@ const userMiddleware = async (req , res , next)=>{
 
         
         const payload = jwt.verify(token, process.env.JWT_KEY);
-
-
         const {_id} = payload;
         if(!_id)
             throw new Error("Invalid Token");
