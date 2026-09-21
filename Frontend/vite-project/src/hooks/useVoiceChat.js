@@ -1,535 +1,877 @@
-import { useEffect, useRef, useState } from "react";
+// import { useEffect, useRef, useState } from "react";
 
-export default function useVoiceChat({
-    socket,
-    roomId,
-    user,
-    username,
-    sessionId,
+// export default function useVoiceChat({
+//     socket,
+//     roomId,
+//     user,
+//     username,
+//     sessionId,
   
-}) {
+// }) {
 
-    const [voiceUsers, setVoiceUsers] = useState([]);
-    const [voiceActive, setVoiceActive] = useState(false);
-    const [connectionStates, setConnectionStates] = useState({});
-    const [remoteStreamsState, setRemoteStreamsState] = useState({});
-    const [isStarting, setIsStarting] = useState(false);
-    // bhai rerender me fir se create nhi hoga ue ?? lost ho jaeyagi na imfo
-    const peerConnections = useRef(new Map());
-    const localStream = useRef(null);
-    const remoteStreams = useRef(new Map());
-    const [isMuted, setIsMuted] = useState(false);
-    const [isJoiningVoice, setIsJoiningVoice] = useState(false);
+//     const [voiceUsers, setVoiceUsers] = useState([]);
+//     const [voiceActive, setVoiceActive] = useState(false);
+//     const [connectionStates, setConnectionStates] = useState({});
+//     const [remoteStreamsState, setRemoteStreamsState] = useState({});
+//     const [isStarting, setIsStarting] = useState(false);
+//     // bhai rerender me fir se create nhi hoga ue ?? lost ho jaeyagi na imfo
+//     const peerConnections = useRef(new Map());
+//     const localStream = useRef(null);
+//     const remoteStreams = useRef(new Map());
+//     const [isMuted, setIsMuted] = useState(false);
+//     const [isJoiningVoice, setIsJoiningVoice] = useState(false);
     
 
 
 
-    const leaveVoice = () => {
+//     const leaveVoice = () => {
 
-        // =========================================
-        // 1. BACKEND KO BATAO
-        // =========================================
+//         // =========================================
+//         // 1. BACKEND KO BATAO
+//         // =========================================
 
-        socket.emit("leave-voice", {
+//         socket.emit("leave-voice", {
 
-            room: roomId,
+//             room: roomId,
 
-            sessionId
+//             sessionId
 
-        });
+//         });
 
 
-        // =========================================
-        // 2. CLOSE ALL WEBRTC CONNECTIONS
-        // =========================================
+//         // =========================================
+//         // 2. CLOSE ALL WEBRTC CONNECTIONS
+//         // =========================================
 
-        peerConnections.current.forEach((pc) => {
+//         peerConnections.current.forEach((pc) => {
 
-            pc.close();
+//             pc.close();
 
-        });
+//         });
 
-        peerConnections.current.clear();
+//         peerConnections.current.clear();
 
 
-        // =========================================
-        // 3. CLEAR ALL REMOTE STREAMS
-        // =========================================
+//         // =========================================
+//         // 3. CLEAR ALL REMOTE STREAMS
+//         // =========================================
 
-        remoteStreams.current.clear();
+//         remoteStreams.current.clear();
 
-        setRemoteStreamsState({});
+//         setRemoteStreamsState({});
 
 
-        // =========================================
-        // 4. CLEAR CONNECTION STATES
-        // =========================================
+//         // =========================================
+//         // 4. CLEAR CONNECTION STATES
+//         // =========================================
 
-        setConnectionStates({});
+//         setConnectionStates({});
 
 
-        // =========================================
-        // 5. STOP LOCAL MICROPHONE
-        // =========================================
+//         // =========================================
+//         // 5. STOP LOCAL MICROPHONE
+//         // =========================================
 
-        if (localStream.current) {
+//         if (localStream.current) {
 
-            localStream.current
-                .getTracks()
-                .forEach(track => {
+//             localStream.current
+//                 .getTracks()
+//                 .forEach(track => {
 
-                    track.stop();
+//                     track.stop();
 
-                });
-
-            localStream.current = null;
-
-        }
-
-
-        // =========================================
-        // 6. RESET MUTE STATE
-        // =========================================
-
-        setIsMuted(false);
-        setIsStarting(false);
-        setIsJoiningVoice(false);
+//                 });
+
+//             localStream.current = null;
+
+//         }
+
+
+//         // =========================================
+//         // 6. RESET MUTE STATE
+//         // =========================================
+
+//         setIsMuted(false);
+//         setIsStarting(false);
+//         setIsJoiningVoice(false);
 
-    };
-    const toggleMute = () => {
-        if (!localStream.current) return;
-        localStream.current.getAudioTracks().forEach(track => {
-            track.enabled = !track.enabled;
-        });
-        setIsMuted(prev => !prev);
-    };
-    const initializeLocalStream = async () => {
+//     };
+//     const toggleMute = () => {
+//         if (!localStream.current) return;
+//         localStream.current.getAudioTracks().forEach(track => {
+//             track.enabled = !track.enabled;
+//         });
+//         setIsMuted(prev => !prev);
+//     };
+//     const initializeLocalStream = async () => {
 
-        if (localStream.current) {
-            return localStream.current;
-        }
+//         if (localStream.current) {
+//             return localStream.current;
+//         }
 
-        try {
-            const stream =
-                await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: false
-                });
-            localStream.current = stream;
-            console.log("🎤 Local Stream Ready");
-            return stream;
-        }
-        catch (error) {
-            console.error(
-                "Failed To Access Microphone :",
-                error
-            );
-            throw error;
-        }
-
-    };
-    const handleStartVoice = async () => {
-        // double click prevent
-        if (isStarting || voiceActive) return;
-        setIsStarting(true);
-        try {
-            await initializeLocalStream();
-            console.log("event successfully fired");
-            socket.emit("voice-start", {
-                room: roomId,
-                userId: user._id,
-                username,
-                sessionId
-            });
-        } catch (error) {
-            console.log(error);
-            // mic permission/error hua to button wapas enable
-            setIsStarting(false);
-        }
-    };
-    const handleJoinVoice = async () => {
-        if (isJoiningVoice) return;
-        try {
-            setIsJoiningVoice(true);
-            await initializeLocalStream();
-            socket.emit("join-voice", {
-
-                room: roomId,
-                userId: user._id,
-                username,
-                sessionId
-
-            });
-
-        }
-        catch (error) {
-            console.log(error);
-            setIsJoiningVoice(false);
-        }
-
-    };
-    const createPeerConnection = (targetSessionId) => {
-
-        if (peerConnections.current.has(targetSessionId)) {
-            return peerConnections.current.get(targetSessionId);
-        }
-
-        const pc = new RTCPeerConnection({
-            iceServers : [
-                { urls: 'stun:global.stun.twilio.com:3478' },
-                { 
-                    urls: 'turn:global.turn.twilio.com:3478?transport=udp',
-                    username: '9c62ac6db56ec83729d37f40bad08e21ac43f45d82e5b1ce9448298507b56ff0',  
-                    credential: 'R9cxsrRCXGMNUCCMxRrg6J+FsrTovXGIfYXTQlczGxI=' 
-                }
-            ]
-        });
-
-        // =========================================
-        // SEND LOCAL AUDIO
-        // =========================================
-
-        if (localStream.current) {
-
-            localStream.current.getTracks().forEach(track => {
-
-                pc.addTrack(track, localStream.current);
-
-            });
-
-        }
-
-        // =========================================
-        // RECEIVE REMOTE AUDIO
-        // =========================================
-
-        pc.ontrack = (event) => { // bhai ye baar baar chlega kya jitna baar samne wala user bolenga 
-            const stream = event.streams[0];
-            if (!stream) return;
-            remoteStreams.current.set(
-                targetSessionId,
-                stream
-            );
-            setRemoteStreamsState(prev => ({
-                ...prev,
-                [targetSessionId]: stream
-            }));
-            console.log(
-                "Remote stream received:",
-                targetSessionId
-            );
-        };
-
-        // =========================================
-        // ICE CANDIDATE
-        // =========================================
-
-        pc.onicecandidate = (event) => {
-
-            if (!event.candidate) return;
+//         try {
+//             const stream =
+//                 await navigator.mediaDevices.getUserMedia({
+//                     audio: true,
+//                     video: false
+//                 });
+//             localStream.current = stream;
+//             console.log("🎤 Local Stream Ready");
+//             return stream;
+//         }
+//         catch (error) {
+//             console.error(
+//                 "Failed To Access Microphone :",
+//                 error
+//             );
+//             throw error;
+//         }
+
+//     };
+//     const handleStartVoice = async () => {
+//         // double click prevent
+//         if (isStarting || voiceActive) return;
+//         setIsStarting(true);
+//         try {
+//             await initializeLocalStream();
+//             console.log("event successfully fired");
+//             socket.emit("voice-start", {
+//                 room: roomId,
+//                 userId: user._id,
+//                 username,
+//                 sessionId
+//             });
+//         } catch (error) {
+//             console.log(error);
+//             // mic permission/error hua to button wapas enable
+//             setIsStarting(false);
+//         }
+//     };
+//     const handleJoinVoice = async () => {
+//         if (isJoiningVoice) return;
+//         try {
+//             setIsJoiningVoice(true);
+//             await initializeLocalStream();
+//             socket.emit("join-voice", {
+
+//                 room: roomId,
+//                 userId: user._id,
+//                 username,
+//                 sessionId
+
+//             });
+
+//         }
+//         catch (error) {
+//             console.log(error);
+//             setIsJoiningVoice(false);
+//         }
+
+//     };
+//     const createPeerConnection = (targetSessionId) => {
+
+//         if (peerConnections.current.has(targetSessionId)) {
+//             return peerConnections.current.get(targetSessionId);
+//         }
+
+//         const pc = new RTCPeerConnection({
+//             iceServers : [
+//                 { urls: 'stun:global.stun.twilio.com:3478' },
+//                 { 
+//                     urls: 'turn:global.turn.twilio.com:3478?transport=udp',
+//                     username: '9c62ac6db56ec83729d37f40bad08e21ac43f45d82e5b1ce9448298507b56ff0',  
+//                     credential: 'R9cxsrRCXGMNUCCMxRrg6J+FsrTovXGIfYXTQlczGxI=' 
+//                 }
+//             ]
+//         });
+
+//         // =========================================
+//         // SEND LOCAL AUDIO
+//         // =========================================
+
+//         if (localStream.current) {
+
+//             localStream.current.getTracks().forEach(track => {
+
+//                 pc.addTrack(track, localStream.current);
+
+//             });
+
+//         }
+
+//         // =========================================
+//         // RECEIVE REMOTE AUDIO
+//         // =========================================
+
+//         pc.ontrack = (event) => { // bhai ye baar baar chlega kya jitna baar samne wala user bolenga 
+//             const stream = event.streams[0];
+//             if (!stream) return;
+//             remoteStreams.current.set(
+//                 targetSessionId,
+//                 stream
+//             );
+//             setRemoteStreamsState(prev => ({
+//                 ...prev,
+//                 [targetSessionId]: stream
+//             }));
+//             console.log(
+//                 "Remote stream received:",
+//                 targetSessionId
+//             );
+//         };
+
+//         // =========================================
+//         // ICE CANDIDATE
+//         // =========================================
+
+//         pc.onicecandidate = (event) => {
+
+//             if (!event.candidate) return;
 
-            if (event.candidate) {
-                console.log(
-                "ICE Candidate:",
-                event.candidate.candidate
-                );
-            }
-
-            console.log("mill gya");
-            socket.emit("voice-ice-candidate", {
-
-                room: roomId,
-
-                senderUserId: sessionId,
-
-                targetSessionId,
-
-                candidate: event.candidate
-
-            });
-        };
-
-        // =========================================
-        // CONNECTION STATE
-        // =========================================
-        pc.onconnectionstatechange = () => {
-
-            const state = pc.connectionState;
-
-            console.log(
-                "Connection:",
-                targetSessionId,
-                state
-            );
-
-            setConnectionStates(prev => ({
-                ...prev,
-                [targetSessionId]: state // is this key value ?? pair 
-            }));
-
-        };
-        // =========================================
-        // ICE CONNECTION STATE
-        // =========================================
-
-        pc.oniceconnectionstatechange = () => {
-
-            console.log(
-
-                targetSessionId,
-
-                pc.iceConnectionState
-
-            );
-
-        };
-        peerConnections.current.set(
-            targetSessionId,
-            pc
-        );
-
-        return pc;
-
-    };
-    const createOffer   = async (targetSessionId) => {
-
-        try {
-
-            // Connection bnao
-            const pc =
-                createPeerConnection(targetSessionId);
-
-            // SDP Offer
-            const offer =
-                await pc.createOffer();
-
-            // Local Description set  means after seeting trigger the ice candidate gathering
-            await pc.setLocalDescription( // will trigger the ice candidate gathering
-                offer
-            );
-
-            // Backend ko bhejo
-            socket.emit("voice-offer", {
-
-                room: roomId,
-
-                senderSessionId: sessionId,
-
-                targetSessionId,
-
-                offer
-
-            });
-
-        }
-        catch (error) {
-
-            console.log(error);
-
-        }
-
-    };
-    const createAnswer  = async ({senderSessionId,offer}) => {
-        try {
-            // Connection bnao
-            const pc =
-                createPeerConnection(senderSessionId);
+//             if (event.candidate) {
+//                 console.log(
+//                 "ICE Candidate:",
+//                 event.candidate.candidate
+//                 );
+//             }
+
+//             console.log("mill gya");
+//             socket.emit("voice-ice-candidate", {
+
+//                 room: roomId,
+
+//                 senderUserId: sessionId,
+
+//                 targetSessionId,
+
+//                 candidate: event.candidate
+
+//             });
+//         };
+
+//         // =========================================
+//         // CONNECTION STATE
+//         // =========================================
+//         pc.onconnectionstatechange = () => {
+
+//             const state = pc.connectionState;
+
+//             console.log(
+//                 "Connection:",
+//                 targetSessionId,
+//                 state
+//             );
+
+//             setConnectionStates(prev => ({
+//                 ...prev,
+//                 [targetSessionId]: state // is this key value ?? pair 
+//             }));
+
+//         };
+//         // =========================================
+//         // ICE CONNECTION STATE
+//         // =========================================
+
+//         pc.oniceconnectionstatechange = () => {
+
+//             console.log(
+
+//                 targetSessionId,
+
+//                 pc.iceConnectionState
+
+//             );
+
+//         };
+//         peerConnections.current.set(
+//             targetSessionId,
+//             pc
+//         );
+
+//         return pc;
+
+//     };
+//     const createOffer   = async (targetSessionId) => {
+
+//         try {
+
+//             // Connection bnao
+//             const pc =
+//                 createPeerConnection(targetSessionId);
+
+//             // SDP Offer
+//             const offer =
+//                 await pc.createOffer();
+
+//             // Local Description set  means after seeting trigger the ice candidate gathering
+//             await pc.setLocalDescription( // will trigger the ice candidate gathering
+//                 offer
+//             );
+
+//             // Backend ko bhejo
+//             socket.emit("voice-offer", {
+
+//                 room: roomId,
+
+//                 senderSessionId: sessionId,
+
+//                 targetSessionId,
+
+//                 offer
+
+//             });
+
+//         }
+//         catch (error) {
+
+//             console.log(error);
+
+//         }
+
+//     };
+//     const createAnswer  = async ({senderSessionId,offer}) => {
+//         try {
+//             // Connection bnao
+//             const pc =
+//                 createPeerConnection(senderSessionId);
             
-            // Remote SDP
-            await pc.setRemoteDescription( //  received offer ko set krna
-                new RTCSessionDescription(offer)
-            );
+//             // Remote SDP
+//             await pc.setRemoteDescription( //  received offer ko set krna
+//                 new RTCSessionDescription(offer)
+//             );
 
-            // Answer
-            const answer =
-                await pc.createAnswer();
+//             // Answer
+//             const answer =
+//                 await pc.createAnswer();
 
-            // Local SDP// after this the candiatdate gatherign is start
-            await pc.setLocalDescription(answer);
+//             // Local SDP// after this the candiatdate gatherign is start
+//             await pc.setLocalDescription(answer);
 
-            // Backend ko bhejo
-            socket.emit("voice-answer", {
+//             // Backend ko bhejo
+//             socket.emit("voice-answer", {
 
-                room: roomId,
+//                 room: roomId,
 
-                senderSessionId: sessionId,
+//                 senderSessionId: sessionId,
 
-                targetSessionId: senderSessionId,
+//                 targetSessionId: senderSessionId,
 
-                answer
+//                 answer
 
-            });
+//             });
 
-        }
-        catch (error) {
+//         }
+//         catch (error) {
 
-            console.log(error);
+//             console.log(error);
 
-        }
+//         }
 
-    };
-    const receiveAnswer = async ({senderSessionId, answer}) => {
-        try {
-            const pc =
-                peerConnections.current.get(senderSessionId);
-            if (!pc) return;
-            await pc.setRemoteDescription(
-                new RTCSessionDescription(answer)
-            );
-        }
-        catch (error) {
-          console.log(error);
-        }
-    };
-    const receiveIceCandidate = async ({senderSessionId,candidate}) => {
-        try {
-            const pc =
-                peerConnections.current.get(senderSessionId);
-            if (!pc) return;
-            await pc.addIceCandidate( // set candiates
-                new RTCIceCandidate(candidate)
-            );
-        }
-        catch (error) {
-            console.log(error);
-        }
-    };
-    const cleanupRemoteUser = (targetSessionId) => {
+//     };
+//     const receiveAnswer = async ({senderSessionId, answer}) => {
+//         try {
+//             const pc =
+//                 peerConnections.current.get(senderSessionId);
+//             if (!pc) return;
+//             await pc.setRemoteDescription(
+//                 new RTCSessionDescription(answer)
+//             );
+//         }
+//         catch (error) {
+//           console.log(error);
+//         }
+//     };
+//     const receiveIceCandidate = async ({senderSessionId,candidate}) => {
+//         try {
+//             const pc =
+//                 peerConnections.current.get(senderSessionId);
+//             if (!pc) return;
+//             await pc.addIceCandidate( // set candiates
+//                 new RTCIceCandidate(candidate)
+//             );
+//         }
+//         catch (error) {
+//             console.log(error);
+//         }
+//     };
+//     const cleanupRemoteUser = (targetSessionId) => {
 
-    // =========================================
-    // 1. CLOSE PEER CONNECTION
-    // =========================================
+//     // =========================================
+//     // 1. CLOSE PEER CONNECTION
+//     // =========================================
 
-    const pc =
-        peerConnections.current.get(targetSessionId);
+//     const pc =
+//         peerConnections.current.get(targetSessionId);
 
-    if (pc) {
+//     if (pc) {
 
-        pc.close();
+//         pc.close();
 
-        peerConnections.current.delete(
-            targetSessionId
-        );
+//         peerConnections.current.delete(
+//             targetSessionId
+//         );
 
+//     }
+
+
+//     // =========================================
+//     // 2. REMOVE REMOTE STREAM
+//     // =========================================
+
+//     remoteStreams.current.delete(
+//         targetSessionId
+//     );
+
+
+//     // =========================================
+//     // 3. REMOVE CONNECTION STATE
+//     // =========================================
+
+//     setConnectionStates(prev => {
+
+//         const updated = { ...prev };
+
+//         delete updated[targetSessionId];
+
+//         return updated;
+
+//     });
+
+
+//     // =========================================
+//     // 4. REMOVE REACT REMOTE STREAM STATE
+//     // =========================================
+
+//     setRemoteStreamsState(prev => {
+
+//         const updated = { ...prev };
+
+//         delete updated[targetSessionId];
+
+//         return updated;
+
+//     });
+
+//     };
+
+
+
+//     useEffect(() => { 
+//         const handleVoiceUsers = (payload) => { 
+//             console.log("MY SESSION:", sessionId);
+//             console.log(
+//                 "VOICE USERS:",
+//                 payload.voiceUsers
+//             );
+//             setVoiceUsers(payload.voiceUsers); 
+//             setVoiceActive(payload.voiceActive); 
+//         }; 
+//         const handleOfferNeeded = async ({ targetSessionId }) => {
+//             await createOffer(targetSessionId);
+//         };
+//         const handleVoiceOffer = async (payload) => {
+//             await createAnswer(payload);
+//         };
+//         const handleVoiceAnswer = async (payload) => {
+//             await receiveAnswer(payload);
+//         };
+//         const handleIceCandidate = async (payload) => {
+//             await receiveIceCandidate(payload);
+//         };
+//         const handleVoiceUserLeft = ({ sessionId: targetSessionId}) => {
+//             // Khud ka leave event ignore
+
+
+//             if (targetSessionId === sessionId) {
+//                 return;
+//             }
+
+//             cleanupRemoteUser(targetSessionId);
+
+//         };
+
+//         socket.on("voice-user-left", handleVoiceUserLeft);
+//         socket.on("voice-ice-candidate", handleIceCandidate);
+//         socket.on("voice-answer", handleVoiceAnswer);
+//         socket.on("voice-offer",  handleVoiceOffer);
+//         socket.on("voice-users", handleVoiceUsers); 
+//         socket.on("voice-offer-needed", handleOfferNeeded);
+
+//         return () => { 
+//             socket.off("voice-users", handleVoiceUsers);
+//             socket.off("voice-offer-needed", handleOfferNeeded); 
+//             socket.off("voice-offer", handleVoiceOffer);
+//             socket.off("voice-answer", handleVoiceAnswer);
+//             socket.off("voice-ice-candidate", handleIceCandidate);
+//             socket.off("voice-user-left", handleVoiceUserLeft);
+//         };
+//     },[socket]);
+
+
+//     return {
+//         voiceUsers,
+//         voiceActive,
+//         connectionStates,
+//         handleStartVoice,
+//         handleJoinVoice,
+//         leaveVoice,
+//         toggleMute,
+//         peerConnections,
+//         localStream,
+//         remoteStreams,
+//         remoteStreamsState,
+//         isMuted,
+
+//         isStarting,
+//         setIsStarting,
+//         isJoiningVoice
+        
+//     };
+// }
+
+
+
+import { useEffect, useRef, useState, useCallback } from "react";
+
+export default function useVoiceChat({
+  socket,
+  roomId,
+  user,
+  username,
+  sessionId,
+}) {
+  const [voiceUsers, setVoiceUsers] = useState([]);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [connectionStates, setConnectionStates] = useState({});
+  const [remoteStreamsState, setRemoteStreamsState] = useState({});
+  const [isStarting, setIsStarting] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isJoiningVoice, setIsJoiningVoice] = useState(false);
+
+  // Persistent WebRTC References Across Re-renders
+  const peerConnections = useRef(new Map());
+  const localStream = useRef(null);
+  const remoteStreams = useRef(new Map());
+
+  // =========================================
+  // LEAVE VOICE & CLEANUP
+  // =========================================
+  const leaveVoice = useCallback(() => {
+    if (socket) {
+      socket.emit("leave-voice", {
+        room: roomId,
+        sessionId,
+      });
     }
 
+    // Close all WebRTC Peer Connections
+    peerConnections.current.forEach((pc) => pc.close());
+    peerConnections.current.clear();
 
-    // =========================================
-    // 2. REMOVE REMOTE STREAM
-    // =========================================
+    // Clear remote streams
+    remoteStreams.current.clear();
+    setRemoteStreamsState({});
+    setConnectionStates({});
 
-    remoteStreams.current.delete(
-        targetSessionId
-    );
+    // Stop local mic tracks
+    if (localStream.current) {
+      localStream.current.getTracks().forEach((track) => track.stop());
+      localStream.current = null;
+    }
 
+    setIsMuted(false);
+    setIsStarting(false);
+    setIsJoiningVoice(false);
+  }, [socket, roomId, sessionId]);
 
-    // =========================================
-    // 3. REMOVE CONNECTION STATE
-    // =========================================
+  // =========================================
+  // TOGGLE MUTE MIC
+  // =========================================
+  const toggleMute = useCallback(() => {
+    if (!localStream.current) return;
+    localStream.current.getAudioTracks().forEach((track) => {
+      track.enabled = !track.enabled;
+    });
+    setIsMuted((prev) => !prev);
+  }, []);
 
-    setConnectionStates(prev => {
+  // =========================================
+  // INITIALIZE LOCAL STREAM
+  // =========================================
+  const initializeLocalStream = useCallback(async () => {
+    if (localStream.current) {
+      return localStream.current;
+    }
 
-        const updated = { ...prev };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      localStream.current = stream;
+      console.log("🎤 Local Audio Stream Active");
+      return stream;
+    } catch (error) {
+      console.error("Failed To Access Microphone:", error);
+      throw error;
+    }
+  }, []);
 
-        delete updated[targetSessionId];
+  // =========================================
+  // START & JOIN VOICE
+  // =========================================
+  const handleStartVoice = useCallback(async () => {
+    if (isStarting || voiceActive) return;
+    setIsStarting(true);
+    try {
+      await initializeLocalStream();
+      socket.emit("voice-start", {
+        room: roomId,
+        userId: user?._id,
+        username,
+        sessionId,
+      });
+    } catch (error) {
+      console.error("Voice Start Error:", error);
+      setIsStarting(false);
+    }
+  }, [isStarting, voiceActive, initializeLocalStream, socket, roomId, user, username, sessionId]);
 
-        return updated;
+  const handleJoinVoice = useCallback(async () => {
+    if (isJoiningVoice) return;
+    try {
+      setIsJoiningVoice(true);
+      await initializeLocalStream();
+      socket.emit("join-voice", {
+        room: roomId,
+        userId: user?._id,
+        username,
+        sessionId,
+      });
+    } catch (error) {
+      console.error("Voice Join Error:", error);
+      setIsJoiningVoice(false);
+    }
+  }, [isJoiningVoice, initializeLocalStream, socket, roomId, user, username, sessionId]);
 
+  // =========================================
+  // PEER CONNECTION FACTORY
+  // =========================================
+  const createPeerConnection = useCallback((targetSessionId) => {
+    if (peerConnections.current.has(targetSessionId)) {
+      return peerConnections.current.get(targetSessionId);
+    }
+
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:global.stun.twilio.com:3478" },
+        {
+          urls: "turn:global.turn.twilio.com:3478?transport=udp",
+          username: "9c62ac6db56ec83729d37f40bad08e21ac43f45d82e5b1ce9448298507b56ff0",
+          credential: "R9cxsrRCXGMNUCCMxRrg6J+FsrTovXGIfYXTQlczGxI=",
+        },
+      ],
     });
 
+    // Add Local Audio Tracks to PC
+    if (localStream.current) {
+      localStream.current.getTracks().forEach((track) => {
+        pc.addTrack(track, localStream.current);
+      });
+    }
 
-    // =========================================
-    // 4. REMOVE REACT REMOTE STREAM STATE
-    // =========================================
+    // Triggered once when receiving the remote audio stream
+    pc.ontrack = (event) => {
+      const stream = event.streams[0];
+      if (!stream) return;
 
-    setRemoteStreamsState(prev => {
+      remoteStreams.current.set(targetSessionId, stream);
+      setRemoteStreamsState((prev) => ({
+        ...prev,
+        [targetSessionId]: stream,
+      }));
+    };
 
-        const updated = { ...prev };
+    // Send ICE Candidates via signaling server
+    pc.onicecandidate = (event) => {
+      if (!event.candidate) return;
 
-        delete updated[targetSessionId];
+      socket.emit("voice-ice-candidate", {
+        room: roomId,
+        senderUserId: sessionId,
+        targetSessionId,
+        candidate: event.candidate,
+      });
+    };
 
-        return updated;
+    // Monitor Connection States
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      setConnectionStates((prev) => ({
+        ...prev,
+        [targetSessionId]: state,
+      }));
+    };
 
+    peerConnections.current.set(targetSessionId, pc);
+    return pc;
+  }, [socket, roomId, sessionId]);
+
+  // =========================================
+  // WEBRTC SIGNALING HANDLERS
+  // =========================================
+  const createOffer = useCallback(async (targetSessionId) => {
+    try {
+      const pc = createPeerConnection(targetSessionId);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socket.emit("voice-offer", {
+        room: roomId,
+        senderSessionId: sessionId,
+        targetSessionId,
+        offer,
+      });
+    } catch (error) {
+      console.error("Create Offer Error:", error);
+    }
+  }, [createPeerConnection, socket, roomId, sessionId]);
+
+  const createAnswer = useCallback(async ({ senderSessionId, offer }) => {
+    try {
+      const pc = createPeerConnection(senderSessionId);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit("voice-answer", {
+        room: roomId,
+        senderSessionId: sessionId,
+        targetSessionId: senderSessionId,
+        answer,
+      });
+    } catch (error) {
+      console.error("Create Answer Error:", error);
+    }
+  }, [createPeerConnection, socket, roomId, sessionId]);
+
+  const receiveAnswer = useCallback(async ({ senderSessionId, answer }) => {
+    try {
+      const pc = peerConnections.current.get(senderSessionId);
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch (error) {
+      console.error("Receive Answer Error:", error);
+    }
+  }, []);
+
+  const receiveIceCandidate = useCallback(async ({ senderSessionId, candidate }) => {
+    try {
+      const pc = peerConnections.current.get(senderSessionId);
+      if (!pc) return;
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      console.error("Receive ICE Candidate Error:", error);
+    }
+  }, []);
+
+  const cleanupRemoteUser = useCallback((targetSessionId) => {
+    const pc = peerConnections.current.get(targetSessionId);
+    if (pc) {
+      pc.close();
+      peerConnections.current.delete(targetSessionId);
+    }
+
+    remoteStreams.current.delete(targetSessionId);
+
+    setConnectionStates((prev) => {
+      const updated = { ...prev };
+      delete updated[targetSessionId];
+      return updated;
     });
 
+    setRemoteStreamsState((prev) => {
+      const updated = { ...prev };
+      delete updated[targetSessionId];
+      return updated;
+    });
+  }, []);
+
+  // =========================================
+  // SOCKET LISTENERS SETUP
+  // =========================================
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleVoiceUsers = (payload) => {
+      setVoiceUsers(payload.voiceUsers);
+      setVoiceActive(payload.voiceActive);
     };
 
-
-
-    useEffect(() => { 
-        const handleVoiceUsers = (payload) => { 
-            console.log("MY SESSION:", sessionId);
-            console.log(
-                "VOICE USERS:",
-                payload.voiceUsers
-            );
-            setVoiceUsers(payload.voiceUsers); 
-            setVoiceActive(payload.voiceActive); 
-        }; 
-        const handleOfferNeeded = async ({ targetSessionId }) => {
-            await createOffer(targetSessionId);
-        };
-        const handleVoiceOffer = async (payload) => {
-            await createAnswer(payload);
-        };
-        const handleVoiceAnswer = async (payload) => {
-            await receiveAnswer(payload);
-        };
-        const handleIceCandidate = async (payload) => {
-            await receiveIceCandidate(payload);
-        };
-        const handleVoiceUserLeft = ({ sessionId: targetSessionId}) => {
-            // Khud ka leave event ignore
-
-
-            if (targetSessionId === sessionId) {
-                return;
-            }
-
-            cleanupRemoteUser(targetSessionId);
-
-        };
-
-        socket.on("voice-user-left", handleVoiceUserLeft);
-        socket.on("voice-ice-candidate", handleIceCandidate);
-        socket.on("voice-answer", handleVoiceAnswer);
-        socket.on("voice-offer",  handleVoiceOffer);
-        socket.on("voice-users", handleVoiceUsers); 
-        socket.on("voice-offer-needed", handleOfferNeeded);
-
-        return () => { 
-            socket.off("voice-users", handleVoiceUsers);
-            socket.off("voice-offer-needed", handleOfferNeeded); 
-            socket.off("voice-offer", handleVoiceOffer);
-            socket.off("voice-answer", handleVoiceAnswer);
-            socket.off("voice-ice-candidate", handleIceCandidate);
-            socket.off("voice-user-left", handleVoiceUserLeft);
-        };
-    },[socket]);
-
-
-    return {
-        voiceUsers,
-        voiceActive,
-        connectionStates,
-        handleStartVoice,
-        handleJoinVoice,
-        leaveVoice,
-        toggleMute,
-        peerConnections,
-        localStream,
-        remoteStreams,
-        remoteStreamsState,
-        isMuted,
-
-        isStarting,
-        setIsStarting,
-        isJoiningVoice
-        
+    const handleOfferNeeded = async ({ targetSessionId }) => {
+      await createOffer(targetSessionId);
     };
+
+    const handleVoiceOffer = async (payload) => {
+      await createAnswer(payload);
+    };
+
+    const handleVoiceAnswer = async (payload) => {
+      await receiveAnswer(payload);
+    };
+
+    const handleIceCandidate = async (payload) => {
+      await receiveIceCandidate(payload);
+    };
+
+    const handleVoiceUserLeft = ({ sessionId: targetSessionId }) => {
+      if (targetSessionId === sessionId) return;
+      cleanupRemoteUser(targetSessionId);
+    };
+
+    socket.on("voice-users", handleVoiceUsers);
+    socket.on("voice-offer-needed", handleOfferNeeded);
+    socket.on("voice-offer", handleVoiceOffer);
+    socket.on("voice-answer", handleVoiceAnswer);
+    socket.on("voice-ice-candidate", handleIceCandidate);
+    socket.on("voice-user-left", handleVoiceUserLeft);
+
+    return () => {
+      socket.off("voice-users", handleVoiceUsers);
+      socket.off("voice-offer-needed", handleOfferNeeded);
+      socket.off("voice-offer", handleVoiceOffer);
+      socket.off("voice-answer", handleVoiceAnswer);
+      socket.off("voice-ice-candidate", handleIceCandidate);
+      socket.off("voice-user-left", handleVoiceUserLeft);
+    };
+  }, [
+    socket,
+    sessionId,
+    createOffer,
+    createAnswer,
+    receiveAnswer,
+    receiveIceCandidate,
+    cleanupRemoteUser,
+  ]);
+
+  return {
+    voiceUsers,
+    voiceActive,
+    connectionStates,
+    handleStartVoice,
+    handleJoinVoice,
+    leaveVoice,
+    toggleMute,
+    peerConnections,
+    localStream,
+    remoteStreams,
+    remoteStreamsState,
+    isMuted,
+    isStarting,
+    setIsStarting,
+    isJoiningVoice,
+  };
 }
-
-
 
 
 

@@ -6,96 +6,127 @@ const redis = require('../confi/redis');
 const crypto = require("crypto");
 const transporter = require('../utils/nodemailer')
 
-const register = async (req , res) => {
-   try {
-       console.log("A");
-      validator(req.body);
-       console.log("B");
+const register = async (req, res) => {
+  try {
+    // Input Validate Karo
+    valid(req.body);
 
-      const { firstName , emailId , password } = req.body;
-      req.body.password = await bcrypt.hash(password , 10); 
- 
-      console.log("Done1");
-      const user = await User.create(req.body); // while creating object if email is same in db i.e if aready exist then it thrwo an error then due to we wrote in scehma that email should be unique so it will thrwo you an error   
-      console.log("Done2");
-      const token = jwt.sign(
-          { _id: user._id , emailId: emailId , firstName: firstName},
-         process.env.JWT_KEY,
-         { expiresIn: 60 * 60 }  //jwt to time isliye de rha taki redis ke saym payload se expire time nikal sake
-      );
-     res.cookie('token', token, {
-        httpOnly: true,
-        secure: true,        // required for HTTPS (Render)
-        sameSite: "none",    // 🔥 CRITICAL FOR CROSS DOMAIN
-        maxAge: 60 * 60 * 1000
+    const { firstName, emailId, password } = req.body;
+
+    // Check duplicate email before hashing to give clean error
+    const existingUser = await User.findOne({ emailId });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Email already registered. Please login instead.",
       });
-      
+    }
 
-       
-      const reply = {
-         firstName : user.firstName,// check here in Schema the casesensitivity F-->F?? OR f--->F ???
-         emailId : user.emailId,
-         _id : user._id 
-      } 
-      res.status(200 ).json({
-          user:reply,
-          message : "REGISTER Successfully"
+    // Password Hash
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Save User
+    const user = await User.create({
+      ...req.body,
+      password: hashedPassword,
+    });
+
+    // Generate JWT
+    const token = jwt.sign(
+      { _id: user._id, emailId: emailId, firstName: firstName },
+      process.env.JWT_KEY,
+      { expiresIn: "1h" }
+    );
+
+    // Set Cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 1000,
+    });
+
+    const reply = {
+      firstName: user.firstName,
+      emailId: user.emailId,
+      _id: user._id,
+    };
+
+    return res.status(201).json({
+      user: reply,
+      message: "REGISTER Successfully",
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "Email already registered. Please login instead.",
       });
-   }
-   catch(err){
-      res.status(400).send("Error : " + err.message);
-   }
+    }
+    return res.status(400).json({
+      message: err.message || "Registration failed",
+    });
+  }
+};
+const login = async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
 
-}
-const login = async (req , res) => {
-   try{
-      const { emailId , password } = req.body;
-      if(!emailId)
-         throw new Error("Invalid Credentials");
-      if(!password) 
-         throw new Error("Invalid Credentials");
-
-      const user = await User.findOne({ emailId });
-
-      if(!user)
-         throw new Error("Invalid Credentials");
-      const Match = await bcrypt.compare(
-         password,
-         user.password
-      );
-
-
-      if(!Match)
-        throw new Error("Invalid Credentials");
-
-      const token = jwt.sign(
-         { _id: user._id , emailId: emailId  , firstName : user.firstName},
-         process.env.JWT_KEY, 
-         { expiresIn: 60 * 60 }
-      );
-
-      const reply = {
-         firstName : user.firstName,
-         emailId : user.emailId,
-         _id : user._id 
-      }
-      res.cookie('token', token, {
-          httpOnly: true,
-          secure: true,        // required for HTTPS (Render)
-          sameSite: "none",    // 🔥 CRITICAL FOR CROSS DOMAIN
-          maxAge: 60 * 60 * 1000
-        });
-
-      res.status(200).json({
-          user:reply,
-          message : "Loggin Successfully"
+    if (!emailId || !password) {
+      return res.status(400).json({
+        message: "Crendential Invalid.",
       });
+    }
 
-   }
-   catch(err){
-        res.status(400).send("Invalid Credentials");
-   } 
-}
+    // Email check karo
+    const user = await User.findOne({ emailId });
+
+    // AGAR USER NAHI HAI -> Frontend ko Signup karne ko bolo
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found. Please signup first.",
+        needSignup: true, // Frontend flag to easily redirect to signup
+      });
+    }
+
+    // Password Match check karo
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        message: "Invalid Password",
+      });
+    }
+
+    // Generate Token
+    const token = jwt.sign(
+      { _id: user._id, emailId: emailId, firstName: user.firstName },
+      process.env.JWT_KEY,
+      { expiresIn: "1h" }
+    );
+
+    // Set Cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 1000,
+    });
+
+    const reply = {
+      firstName: user.firstName,
+      emailId: user.emailId,
+      _id: user._id,
+    };
+
+    return res.status(200).json({
+      user: reply,
+      message: "Logged in successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message || "Internal Server Error",
+    });
+  }
+};
 const logout = async (req , res) => {
    try{
       const {token} = req.cookies;
@@ -193,7 +224,6 @@ const forgotPassword = async (req, res) => {
     });
   }
 };
-
 const resetPassword = async (req, res) => {
   try {
 
@@ -253,7 +283,8 @@ const resetPassword = async (req, res) => {
     });
   }
 };
-
-
 module.exports = {register , login , logout ,resetPassword , forgotPassword};
+
+
+
 

@@ -13,6 +13,8 @@ function initializeSocket(server){
             origin:"https://codetogether-mu.vercel.app",
             credentials:true
         }
+        
+
     });
     io.on("connection", (socket) => { 
         registerUserInRoom(io, socket); 
