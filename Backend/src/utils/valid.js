@@ -14,3 +14,7 @@ const valid = (data) => {
     throw new Error("Invalid Email Format");
   }
 };
+
+
+
+module.exports = valid;

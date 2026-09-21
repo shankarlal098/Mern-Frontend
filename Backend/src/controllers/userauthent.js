@@ -1,11 +1,10 @@
 const User = require('../models/userschema');
-const validator = require('../utils/valid');
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const redis = require('../confi/redis');
 const crypto = require("crypto");
 const transporter = require('../utils/nodemailer')
-
+const valid = require('../utils/valid');
 const register = async (req, res) => {
   try {
     // Input Validate Karo
