@@ -41,8 +41,6 @@ function Signup() {
     if (typeof err === "string") return err;
     return (
       err?.response?.data?.message ||
-      err?.data?.message ||
-      err?.message ||
       "Registration failed. Please try again."
     );
   };
