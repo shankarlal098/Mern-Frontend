@@ -91,7 +91,7 @@ const login = async (req, res) => {
 
     if (!isPasswordMatch) {
       return res.status(401).json({
-        message: "Invalid Password",
+        message: "Invalid Credential",
       });
     }
 
